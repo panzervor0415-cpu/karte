@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="手書きカルテ">
+<meta name="theme-color" content="#ffffff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="stylesheet" href="style.css">
+<title>手書きカルテ</title>
+</head>
+<body>
+
+<!-- 患者一覧 -->
+<section id="listView" class="view">
+  <header class="bar">
+    <h1>手書きカルテ</h1>
+    <input id="search" type="search" placeholder="カルテ番号・名前・フリガナで検索" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false">
+    <button id="btnNewPatient" class="primary">＋ 新規患者</button>
+    <button id="btnBackup">バックアップ</button>
+  </header>
+  <div id="backupNotice" class="notice" hidden>
+    <span id="backupNoticeText"></span>
+    <button id="btnBackupNow" class="small">今すぐバックアップ</button>
+  </div>
+  <div class="list-wrap">
+    <ul id="patientList" class="patient-list"></ul>
+    <p id="emptyList" class="empty" hidden></p>
+  </div>
+</section>
+
+<!-- 患者のカルテ -->
+<section id="patientView" class="view" hidden>
+  <header class="bar">
+    <button id="btnBack">‹ 一覧</button>
+    <button id="btnEditPatient" class="pinfo" title="患者情報を編集">
+      <span id="pvNo" class="no"></span>
+      <strong id="pvName"></strong>
+      <span id="pvSub" class="sub"></span>
+    </button>
+    <div class="tools">
+      <button class="tool active" data-tool="k"><span class="dot k"></span>黒</button>
+      <button class="tool" data-tool="r"><span class="dot r"></span>赤</button>
+      <button class="tool" data-tool="e">消しゴム</button>
+      <button id="btnUndo" disabled>↶ 戻す</button>
+    </div>
+    <span id="saveState" class="save-state"></span>
+    <button id="btnNewPage" class="primary">＋ 新しい来院</button>
+  </header>
+  <div id="pages" class="pages"></div>
+</section>
+
+<!-- 患者の登録・編集 -->
+<dialog id="patientDialog">
+  <form id="patientForm" method="dialog" autocomplete="off">
+    <h2 id="patientDialogTitle">新規患者</h2>
+    <label>カルテ番号 <span class="req">必須</span>
+      <input name="chartNo" inputmode="numeric" required>
+    </label>
+    <p id="dupWarning" class="warn" hidden></p>
+    <label>名前 <span class="req">必須</span>
+      <input name="name" required>
+    </label>
+    <label>フリガナ
+      <input name="kana">
+    </label>
+    <label>生年月日
+      <input name="birth" type="date">
+    </label>
+    <div class="dialog-buttons">
+      <button type="button" id="btnDeletePatient" class="danger" hidden>この患者を削除</button>
+      <span class="spacer"></span>
+      <button type="button" data-close>キャンセル</button>
+      <button type="submit" class="primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ページのメニュー -->
+<dialog id="pageDialog">
+  <form id="pageForm" method="dialog">
+    <h2>このページ</h2>
+    <label>来院日
+      <input name="date" type="date" required>
+    </label>
+    <div class="dialog-buttons">
+      <button type="button" id="btnDeletePage" class="danger">ページを削除</button>
+      <span class="spacer"></span>
+      <button type="button" data-close>キャンセル</button>
+      <button type="submit" class="primary">保存</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- バックアップ -->
+<dialog id="backupDialog">
+  <div class="backup">
+    <h2>バックアップ</h2>
+    <p id="lastBackupText" class="muted"></p>
+    <p id="persistText" class="muted"></p>
+
+    <h3>1. 保存する</h3>
+    <p class="muted">全患者・全カルテを1つのファイルにまとめます。「ファイルに保存」から iCloud Drive などに保存してください。</p>
+    <div class="row">
+      <button id="btnMakeBackup" class="primary">バックアップファイルを作る</button>
+      <button id="btnSaveBackup" hidden class="primary">ファイルを保存する</button>
+    </div>
+    <p id="backupStatus" class="muted"></p>
+
+    <h3>2. 元に戻す（復元）</h3>
+    <p class="muted">バックアップファイルを読み込みます。<strong>いまiPadにあるデータは、ファイルの内容で置き換わります。</strong></p>
+    <div class="row">
+      <label class="button-like">ファイルを選んで復元<input id="restoreFile" type="file" accept=".json,application/json" hidden></label>
+    </div>
+
+    <h3>アプリの版</h3>
+    <div class="row" style="align-items:center">
+      <span>版：<strong id="appVersion">―</strong></span>
+      <button type="button" id="btnCheckUpdate" class="small">更新を確認</button>
+    </div>
+    <p id="updateCheckText" class="muted"></p>
+
+    <div class="dialog-buttons">
+      <span class="spacer"></span>
+      <button type="button" data-close>閉じる</button>
+    </div>
+  </div>
+</dialog>
+
+<div id="updateBar" class="update-bar" hidden>
+  <span>アプリの新しい版があります。</span>
+  <button id="btnUpdate" class="primary small">今すぐ更新</button>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="body.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
